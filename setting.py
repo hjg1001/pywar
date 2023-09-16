@@ -1,0 +1,10 @@
+width,height=720,1600#窗口大小
+tree_num=[5,6]#多少树 树太多会一直找不到落脚点
+npc_blue_num=2#蓝队npc数量
+npc_red_num=2#红队npc数量
+min,max=-160,160#NPC生成在队友周围的范围
+tree_x,tree_y=30,30#树之间的横纵距离
+npc_info_list=['speed','side','target_x','target_y']#左上角显示/可修改的NPC数据
+fps=88#帧率
+walk_p=0.55#走路动腿的频率
+npc_none,npc_none_speed=0.4,0.36#闲置状态NPC动画频率和动画速度
