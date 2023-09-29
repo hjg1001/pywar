@@ -6,7 +6,7 @@ class Zx(pygame.sprite.Sprite):#准心
 		self.rect=self.image.get_rect()
 		self.rect.x,self.rect.y=self.x,self.y=x,y
 	def update(self,screen,map):
-		screen.blit(self.image,(self.x,self.y))
+		screen.blit(self.image,(self.rect.x,self.rect.y))
 		result=pygame.sprite.spritecollideany(self,map.npc_group)
 		if result!=None:
 			map.npc_obj=result
@@ -16,8 +16,10 @@ def control(event,map):
 	if event.type == pygame.KEYDOWN:
 		if event.key == pygame.K_z and not(map.change or map.change_p):
 			map.z_s=True
-		if event.key==pygame.K_a and not(map.change or map.change_p):
-			map.a_s=True
+		if event.key==pygame.K_a and not map.s_npc and not(map.change or map.change_p):#选中NPC
+			map.s_npc=True
+		elif event.key==pygame.K_a:
+			map.s_npc=False
 		if event.key==pygame.K_UP:
 			if map.change and map.npc_p>0 and not map.change_p:
 				map.npc_p-=1
@@ -57,6 +59,7 @@ def control(event,map):
 				map.change=False
 			else:
 				map.change=True
+				map.s_npc=False
 				map.m_l,map.m_r,map.m_d,map.m_u=False,False,False,False
 #------debug---------
 		if event.key==pygame.K_b and map.npc_obj:
@@ -87,8 +90,6 @@ def control(event,map):
 	if event.type == pygame.KEYUP:
 		if event.key==pygame.K_z:
 			map.z_s=False
-		if event.key==pygame.K_a:
-			map.a_s=False
 		if event.key==pygame.K_UP:
 			map.m_u=False
 		if event.key==pygame.K_DOWN:
@@ -97,19 +98,23 @@ def control(event,map):
 			map.m_l=False
 		if event.key==pygame.K_RIGHT:
 				map.m_r=False
-def act(map,screen):
-	if map.z_s and map.scale>0.9:
-		map.scale-=0.1
-	if map.a_s and map.scale<3:
-		map.scale+=0.1
-	if map.m_u:
+def act(map,screen,zx):
+	if map.m_u and map.vy<0 and not map.s_npc:
 		map.vy+=10
-	elif map.m_d:
+	elif map.m_u and map.s_npc:#改变准心位置
+		zx.rect.y-=5
+	elif map.m_d and -map.vy+setting.height<map.height and not map.s_npc:
 		map.vy-=10
-	if map.m_l:
+	elif map.s_npc and map.m_d:#改变准心位置
+		zx.rect.y+=5
+	if map.m_l and map.vx<0 and not map.s_npc:
 		map.vx+=10
-	if map.m_r:
+	elif map.s_npc and map.m_l:#改变准心位置
+		zx.rect.x-=5
+	if map.m_r and -map.vx+setting.width<map.width and not map.s_npc:
 		map.vx-=10
+	elif map.s_npc and map.m_r:#改变准心位置
+		zx.rect.x+=5
 def render_text(map,screen):#渲染输入框
 	if map.change_p:
 		font=pygame.font.Font('NotoSerifCJK-Regular.ttc',40)

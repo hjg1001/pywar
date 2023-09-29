@@ -21,12 +21,13 @@ def angle(x,y,target_x,target_y):
     angle_q = math.degrees(angle_q)+180
     return angle_q
 def move(npc):#移动
-	if npc.target_x!=0 and npc.target_y!=0:
+	if npc.target_x!=0 and npc.target_y!=0 and npc.target_angle-npc.angle<1:
 		new_xy=move_q(npc.x,npc.y,npc.target_x,npc.target_y,npc.speed)
 		npc.state='move'
 		npc.x,npc.y=new_xy
 		angle_num=angle(npc.x,npc.y,npc.target_x,npc.target_y)
-		if npc.target_x!=npc.x and npc.target_y!=npc.y:npc.target_angle=angle_num
+		if npc.target_x!=npc.x and npc.target_y!=npc.y:npc.target_angle=int(angle_num)
 		else:
-			npc.state=None,
+			npc.state=None
+			npc.frame=2
 			npc.target_x,npc.target_y=0,0

@@ -11,22 +11,30 @@ class NPC(pygame.sprite.Sprite):
 		self.shoot_x,self.shoot_y=0,0
 		self.angle=0
 		self.target_angle=0
-		self.none_anim,self.none_x=False,0
+		self.none_x=0
+		self.frame=1
+		self.anim=0#帧计时
+		self.anim_max=1#帧计时最大值
 		#NPC属性
 		self.side=side#阵营(red/bule)
-		self.speed=1#当前的速度
+		self.speed=1.9#当前的速度
 		self.state=None#当前状态
 		self.action=None#当前行为
-		self.frame=1
 	def draw_update(self,surface):#把NPC渲染出来
 		surface.blit(self.image,(self.x,self.y))
 		
 	
 	def npc_tile(self):#更新贴图(动画)
-		if tile.update(self):
-			self.image=pygame.transform.rotate(self.image,self.target_angle)
-
-
+		if self.anim<self.anim_max:
+			self.anim+=1/60+setting.anim_speed
+		if tile.update(self) and self.anim>self.anim_max:
+			self.anim=0
+		self.image=pygame.transform.rotate(self.image,self.angle).convert_alpha()
+		if self.angle!=self.target_angle:
+			if self.angle<self.target_angle:self.angle+=2
+			elif self.angle>self.target_angle:self.angle-=2
+		if self.target_angle-self.angle<2:
+			self.angle=self.target_angle
 	def update(self,surface,map):#更新行为
 		self.rect.x,self.rect.y=map.scale*self.x+map.vx,map.scale*self.y+map.vy
 		#---行为---
