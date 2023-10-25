@@ -28,16 +28,33 @@ blue_walk_4=blue.subsurface(pygame.Rect(165,1,31,39))
 red_run_1=red.subsurface(pygame.Rect(198,1,31,39))
 blue_run_1=blue.subsurface(pygame.Rect(198,1,31,39))
 
-red_run_2=red.subsurface(pygame.Rect(231,1,31,40))
-blue_run_2=blue.subsurface(pygame.Rect(231,1,31,40))
+red_run_2=red.subsurface(pygame.Rect(231,1,31,39))
+blue_run_2=blue.subsurface(pygame.Rect(231,1,31,39))
 
 red_run_3=red.subsurface(pygame.Rect(264,1,31,39))
 blue_run_3=blue.subsurface(pygame.Rect(264,1,31,39))
 
-red_run_4=red.subsurface(pygame.Rect(297,1,31,40))
+red_run_4=red.subsurface(pygame.Rect(297,1,31,39))
 blue_run_4=blue.subsurface(pygame.Rect(297,1,31,39))
-
+#瞄准
+red_shoot_1=red.subsurface(pygame.Rect(330,1,31,39))
+blue_shoot_1=blue.subsurface(pygame.Rect(330,1,31,39))
+#开火
+red_shoot_2=red.subsurface(pygame.Rect(362,1,28,39))
+blue_shoot_2=blue.subsurface(pygame.Rect(362,1,28,39))
+#开枪火焰
+fire=pygame.image.load('步枪开火.png')
+fire_1=fire.subsurface(pygame.Rect(1,1,20,24))
+fire_2=fire.subsurface(pygame.Rect(21,1,20,24))
+fire_3=fire.subsurface(pygame.Rect(41,1,20,24))
+fire_4=fire.subsurface(pygame.Rect(61,1,20,24))
+fire_5=fire.subsurface(pygame.Rect(79,1,20,24))
+#枪烟
+fire_smoke=pygame.image.load('烟.png')
+fire_smoke.set_alpha(50)
 def update(npc):
+	if npc.old_state!=npc.state:#重置动画帧
+		npc.anim=0
 	#动画参数
 	anim_state='none'#动画类型
 	anim_start=False#开始下一帧 bool
@@ -60,6 +77,24 @@ def update(npc):
 		anim_state='run'
 		anim_start=((random.random()<0.8-(0.9-npc.speed)) or npc.speed<0.15) and npc.anim>npc.anim_max
 		anim_farme=4
+	if npc.state=='aim':
+		#瞄准
+		npc.anim_max=0.2
+		anim_state='shoot'
+		anim_start=True
+		anim_farme=1
+	if npc.state=='shoot':
+		#开火
+		npc.anim_max=0.25
+		anim_state='shoot'
+		anim_start=True
+		anim_farme=2
+	if npc.state=='reload':
+		#装弹
+		npc.anim_max=0.5
+		anim_state='run'
+		anim_start=True
+		anim_farme=1
 #循环动画
 	if npc.side=='blue' and anim_start:
 		if npc.frame<anim_farme+1 and npc.none_x==0:#正序
@@ -99,7 +134,6 @@ def update(npc):
 
 
 
-
-
-
+	#记录旧动画
+	npc.old_state=npc.state
 	return anim_start

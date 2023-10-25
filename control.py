@@ -61,9 +61,14 @@ def control(event,map):
 				map.change=True
 				map.s_npc=False
 				map.m_l,map.m_r,map.m_d,map.m_u=False,False,False,False
+		if event.key==pygame.K_c and not map.pause:
+			map.pause=True
+		elif event.key==pygame.K_c and map.pause:
+			map.pause=False
 #------debug---------
 		if event.key==pygame.K_b and map.npc_obj:
-			map.npc_obj.target_x,map.npc_obj.target_y=random.uniform(0.1,0.9)*map.width,random.uniform(0.1,0.9)*map.height
+			map.npc_obj.action='shoot'
+			#map.npc_obj.target_x,map.npc_obj.target_y=random.uniform(0.1,0.9)*map.width,random.uniform(0.1,0.9)*map.height
 #-------------------------
 		#输入框
 		if map.change_p and event.key==pygame.K_BACKSPACE:#删除

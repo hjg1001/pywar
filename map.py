@@ -3,8 +3,8 @@ pygame.init()
 screen=pygame.display.set_mode((720,1600))
 font=pygame.font.Font('NotoSerifCJK-Regular.ttc',15)
 ck=pygame.time.Clock()
-
-
+pygame.mixer.music.set_volume(1)
+pygame.mixer.init()
 
 
 class map_class:
@@ -18,8 +18,9 @@ class map_class:
 		self.map=pygame.Surface((setting.map_w,setting.map_h),pygame.SRCALPHA).convert()#小地图图层
 		self.grass_back=pygame.Surface((width,height)).convert()#非精灵图层
 		self.display_surface=pygame.Surface((width,height))#完整的地图图层
-		self.sprite_group=pygame.sprite.Group()
-		self.npc_group=pygame.sprite.Group()
+		self.sprite_group=pygame.sprite.Group()#地图精灵组
+		self.o_sprite=pygame.sprite.Group()#其他精灵组
+		self.npc_group=pygame.sprite.Group()#NPC精灵组
 		self.s_npc=False#选中模式
 		self.npc_obj=None#被选中的NPC对象
 		self.change=False#正在修改NPC
@@ -28,6 +29,8 @@ class map_class:
 		self.npc_p_num=None#修改NPC属性的值
 		self.npc_p_type=None#npc属性类型
 		self.debug=None
+		self.sound_list=[]
+		self.pause=False#暂停
 	def init(self):
 		for x in range(0,self.width,50):
 			for y in range(0,self.height,50):
@@ -60,13 +63,14 @@ while True:
 	#渲染非精灵
 	map.display_surface.blit(map.grass_back,(0,0))
 	#渲染精灵 图层顺序低-高
+	map.o_sprite.update(map.display_surface,map)
 	map.sprite_group.update(screen,map,map.display_surface,'else')
 	map.npc_group.update(map.display_surface,map)
 	#渲染图层
 	map.render(screen)
 	#渲染左上角信息
 	ck.tick(setting.fps)
-	fps=font.render(str(int(ck.get_fps()))+'-----------'+str(map.npc_obj)+'-------debug: '+str(map.debug),True,(0,0,0),(255,255,255))
+	fps=font.render(str(int(ck.get_fps()))+'   暂停:'+str(map.pause)+'   debug: '+str(map.debug),True,(0,0,0),(255,255,255))
 	screen.blit(fps,(0,5))
 	control.draw_npc_info(screen,map,font)
 	control.render_text(map,screen)
@@ -75,5 +79,11 @@ while True:
 	#渲染小地图
 	screen.blit(map.map,setting.m_p)
 	map.map.set_alpha(setting.alpha)
+	#播放音效
+	if map.sound_list:
+		for i in map.sound_list:
+			sound=pygame.mixer.Sound(i)
+			sound.play()
+	map.sound_list.clear()
 	#刷新屏幕
 	pygame.display.update()
