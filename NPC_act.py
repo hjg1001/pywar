@@ -1,5 +1,5 @@
 #NPC行为
-import math,random
+import math,random,astar
 def move_q(x, y, target_x, target_y, speed):
     dx = target_x - x
     dy = target_y - y
@@ -22,19 +22,30 @@ def angle(x,y,target_x,target_y,angle):
     if angle_q>180:a=0
     if angle_q==180:angle_q=-(angle_q-180)
     angle_q = a+math.degrees(angle_q)
+    if x==target_x and y==target_y:angle_q=angle
     return angle_q
-def move(npc):#移动
-	if npc.target_x!=0 and npc.target_y!=0 and abs(npc.target_angle-npc.angle)<1:
-		new_xy=move_q(npc.x,npc.y,npc.target_x,npc.target_y,npc.speed)
+
+
+def move(npc,map):#移动
+	road_list=0
+	if npc.target_x!=0 and npc.target_y!=0 and npc.angle==npc.target_angle:
+		road_list=map.astar_search.run([int(npc.x//50),int(npc.y//50)],[int(npc.target_x//50),int(npc.target_y//50)])
+		if len(road_list)<=1:npc.move_q=[npc.target_x,npc.target_y]
+		elif [npc.x,npc.y]==[road_list[0][0]*50,road_list[0][1]*50]:
+			npc.move_q=[road_list[1][0]*50,road_list[1][1]*50]
+		elif npc.move_q==0 or (npc.move_q[0]!=road_list[1][0]*50 and npc.move_q[1]!=road_list[1][1]*50):
+			npc.move_q=[road_list[0][0]*50,road_list[0][1]*50]
+		new_xy=move_q(npc.x,npc.y,npc.move_q[0],npc.move_q[1],npc.speed)
 		npc.state='move'
 		npc.x,npc.y=new_xy
-		angle_num=angle(npc.x,npc.y,npc.target_x,npc.target_y,npc.angle)
-		if npc.target_x!=npc.x and npc.target_y!=npc.y and npc.target_angle==npc.angle:
-			npc.target_angle=int(angle_num)
-		else:
-			npc.state=None
-			npc.frame=2
+		angle_num=angle(npc.x,npc.y,npc.move_q[0],npc.move_q[1],npc.angle)
+		npc.target_angle=int(angle_num)
+		if abs(npc.x-npc.target_x )<2 and abs(npc.y-npc.target_y)<2:
+			npc.move_q=0
 			npc.target_x,npc.target_y=0,0
+			npc.state=None
+		npc.road=road_list
+	return road_list
 def shoot(npc):#开火
 	fire=False
 	if npc.gun['ammo']==0 and npc.rifle_ammo==0:
@@ -43,10 +54,12 @@ def shoot(npc):#开火
 		fire=0
 	if fire==False and npc.state!='reload':
 		if npc.state=='shoot':
-			if npc.frame==2 and npc.anim>0.15:
-				npc.state=None
-				npc.aim=0
-				npc.action=None
+			if npc.frame==3 and npc.anim>0.01:
+				npc.state='aim'
+				npc.frame=2
+				npc.aim-=random.random()*0.8-0.007
+				npc.action='shoot'
+				npc.p=False
 		if npc.aim<1 and npc.action=='shoot':
 			npc.aim+=0.007
 			npc.state='aim'
@@ -67,7 +80,7 @@ def reload(npc,map):#装弹
  			if npc.rifle_ammo>=1:
  				npc.rifle_ammo-=1
  				npc.gun['ammo']+=1
- 				map.sound_list.append('单发装填.wav')
+ 				map.sound_list.append('单发装填'+str(random.randint(1,4))+'.mp3')
  			else:npc.state,npc.reload_time=None,0
 	else:
  		time=0.012-npc.gun['max_ammo']*0.0008
@@ -78,12 +91,12 @@ def reload(npc,map):#装弹
  			if npc.rifle_clip>=1:
  				npc.rifle_clip-=1
  				npc.gun['ammo']=npc.gun['max_ammo']
- 				map.sound_list.append('步枪装填.wav')
+			 	if npc.gun['type']==0:map.sound_list.append('步枪装填'+str(random.randint(1,4))+'.mp3')
+			 	if npc.gun['type']==1:map.sound_list.append('手枪装填'+str(random.randint(1,4))+'.mp3')
  				clip=True
  			else:npc.state,npc.reload_time=None,0
 	npc.jd,npc.max_jd=npc.reload_time*20,1*20
 	if npc.gun['ammo']==npc.gun['max_ammo'] or npc.rifle_ammo==0:
- 		map.sound_list.append('上膛.wav')
  		npc.state=None
  		npc.reload_time=0
  		npc.jd,npc.max_jd=0,0

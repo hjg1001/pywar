@@ -1,4 +1,4 @@
-import pygame,control,random,terrain,setting,NPC
+import pygame,control,random,terrain,setting,NPC,astar
 pygame.init()
 screen=pygame.display.set_mode((720,1600))
 font=pygame.font.Font('NotoSerifCJK-Regular.ttc',15)
@@ -30,8 +30,16 @@ class map_class:
 		self.npc_p_type=None#npc属性类型
 		self.debug=None
 		self.sound_list=[]
+		self.team_list={}
 		self.pause=False#暂停
+		self.A_map=[]#二维简化地图
+		self.astar_search=0
 	def init(self):
+		for i in range(int(self.height/50)):
+			self.A_map.append([])
+			for o in range(int(self.width/50)):
+				self.A_map[i].append(0)
+		self.astar_search=astar.Astar(self.A_map)
 		for x in range(0,self.width,50):
 			for y in range(0,self.height,50):
 				self.grass_back.blit(self.grass1,(x,y),(random.randint(50,255-50),0,50,50))
@@ -49,7 +57,7 @@ class map_class:
 			else:color=(7,96,177)
 			pygame.draw.circle(self.map,color,((setting.map_w/self.width)*i.x,(setting.map_h/self.height)*i.y),2)
 			pygame.draw.rect(self.map,(0,0,0),((setting.map_w/self.width)*(-self.vx),(setting.map_h/self.height)*(-self.vy),(setting.map_w/self.width)*setting.width,(setting.map_h/self.height)*setting.height),2)
-map=map_class(3200,3200)
+map=map_class(3000,3000)
 map.init()
 map.sprite_group.update(screen,map,map.grass_back,'init')
 NPC.create_npc(map)
@@ -70,7 +78,8 @@ while True:
 	map.render(screen)
 	#渲染左上角信息
 	ck.tick(setting.fps)
-	fps=font.render(str(int(ck.get_fps()))+'   暂停:'+str(map.pause)+'   debug: '+str(map.debug),True,(0,0,0),(255,255,255))
+	fps=font.render(str(int(ck.get_fps
+	()))+'   暂停:'+str(map.pause)+'   debug: '+str(map.debug),True,(0,0,0),(255,255,255))
 	screen.blit(fps,(0,5))
 	control.draw_npc_info(screen,map,font)
 	control.render_text(map,screen)

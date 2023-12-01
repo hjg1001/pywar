@@ -1,3 +1,4 @@
+#pylint:disable=E1136
 import pygame,NPC_act,setting,random,tile
 
 
@@ -14,6 +15,7 @@ class shell(pygame.sprite.Sprite):#弹壳
 		self.scale=1.2
 		self.angle=angle
 		self.time=0
+		self.max_time=500+random.randint(100,300)#最大存在时间
 		self.max_scale=0.8
 		self.target=[x+15+abs(15*(random.random()-random.random())),y+6+10*(random.random()-random.random())]
 	def update(self,screen,map):#弹壳掉落
@@ -27,7 +29,7 @@ class shell(pygame.sprite.Sprite):#弹壳
 		self.image=pygame.transform.scale(self.image,(int(2*self.scale),int(5*self.scale)))
 		screen.blit(self.image,(self.x,self.y))
 		self.time+=1
-		if self.time>500:self.image_old.set_alpha(255-(self.time-500)*4)
+		if self.time>self.max_time:self.image_old.set_alpha(255-(self.time-500)*4)
 		elif self.time>550:del self
 
 
@@ -36,10 +38,9 @@ class shell(pygame.sprite.Sprite):#弹壳
 class NPC(pygame.sprite.Sprite):
 	def __init__(self,x,y,side):
 		self.type='npc'
+		self.image=tile.fire_1
 		pygame.sprite.Sprite.__init__(self)
-		if side=='red':self.image=tile.red_none_1
-		else:self.image=tile.blue_none_1
-		self.surface=pygame.Surface((32,50),pygame.SRCALPHA)#个体NPC整体表面
+		self.surface=pygame.Surface((30,50),pygame.SRCALPHA)#个体NPC整体表面
 		self.rect=self.image.get_rect()
 		self.x,self.y=self.rect.x,self.rect.y=x,y
 		self.target_x,self.target_y=0,0
@@ -55,32 +56,38 @@ class NPC(pygame.sprite.Sprite):
 		self.old_state=None#旧状态
 		self.debug_cmd=0
 		self.time,self.time2=0,0
+		self.p=True#是否重置帧
+		self.move_q=0#当前移动目标
 		self.jd,self.max_jd=0,0#进度条的进度,上限
+		self.road_s=0#改变路线计时
+		self.old_xy=[self.x,self.y]
+		self.road=None
 		#NPC属性
-		self.gun={'name':'1','ammo':1,'max_ammo':5}
+		#type 步枪-手枪 文本为准
+		self.job_text=0
+		self.gun={'type':0}
 		self.rifle_ammo,self.rifle_clip=10,1
 		self.side=side#阵营(red/bule)
 		self.team=0#部队编号
-		self.job=None#职位
-		self.level=0#等级(作战水平)
-		self.speed=1.9#当前的速度
+		self.job=0#职位
+		self.level=1#等级(作战水平)
+		self.speed=1.8#当前的速度
 		self.state=None#当前状态
 		self.action=None#当前行为
 	def draw_update(self,surface,fire):#把NPC渲染出来
-		self.surface.fill((0,0,0,0))
-		self.surface.blit(self.image,(0,15))
-		#调试用线段
-		if self.state=='move':pygame.draw.line(surface,(0,0,90),(self.x,self.y),(self.target_x,self.target_y))
+		self.surface.blit(self.image,(0,13))
 		#枪口特效
+		xz=0
+		if self.gun['type']==1:xz=11#枪口贴图修正(+下移)
 		if fire or (self.time>0 and self.time<6):
 			self.time+=1
-			self.surface.blit(pygame.transform.scale(eval('tile.fire_'+str(random.randint(1,5))),(35,40)),(-2,-10))
+			self.surface.blit(pygame.transform.scale(eval('tile.fire_'+str(random.randint(1,5))),(35,40)),(-2,-10+xz))
 		elif not fire:
 			self.time=0
 		if fire or (self.time2>0 and self.time2<30):
 			self.time2+=1
 			fire_smoke=tile.fire_smoke
-			self.surface.blit(pygame.transform.scale((fire_smoke),(20,29)),(2,-9-self.time2*0.3))
+			self.surface.blit(pygame.transform.scale((fire_smoke),(20,29)),(2,-9-self.time2*0.3+xz))
 			fire_smoke.set_alpha(65-self.time2*1.8)
 		elif not fire:
 			self.time2=0
@@ -94,23 +101,41 @@ class NPC(pygame.sprite.Sprite):
 			self.anim=0
 		#旋转
 		if self.angle!=self.target_angle:
-			if self.angle<self.target_angle:self.angle+=3
-			elif self.angle>self.target_angle:self.angle-=3
-		if abs(self.target_angle-self.angle)<3:
+			if self.angle<self.target_angle:self.angle+=5
+			elif self.angle>self.target_angle:self.angle-=5
+		if abs(self.target_angle-self.angle)<5:
 			self.angle=self.target_angle
-		if abs(self.angle)>360 or abs(self.target_angle)>360:self.angle,self.target_angle=0,0
+		if abs(self.angle)>360 or abs(self.target_angle)>360:
+			self.angle,self.target_angle=0,0
 	def update(self,surface,map):#更新行为
+		#在二维地图上更新NPC
+		if [int(self.x//50),int(self.y//50)]!=[int(self.old_xy[0]//50),int(self.old_xy[1]//50)]:map.A_map[int(self.old_xy[0]//50)][int(self.old_xy[1]//50)]=0
+		self.old_xy=[self.x,self.y]
+		y=self.y//50#纵行
+		x=self.x//50#横行
+		map.A_map[int(y)][int(x)]=None
+		self.job_text=setting.job[self.job]
 		self.rect.x,self.rect.y=map.scale*self.x+map.vx,map.scale*self.y+map.vy
 		#---行为---
 		fire=False
 		if not map.pause:
 				#移动
-			NPC_act.move(self)
+			road=NPC_act.move(self,map)
+					#调试用线段
+			if self.state=='move':pygame.draw.line(surface,(0,0,90),(self.x,self.y),(self.target_x,self.target_y))
+			if self.move_q!=0 and type(road)!=int:
+				for id,i in enumerate(road):
+					if id==0:pygame.draw.line(surface,(250,255,245),(self.x,self.y),(road[0][0]*50,road[0][1]*50))
+					elif id<=len(road)-2:pygame.draw.line(surface,(250,255,245),(i[0]*50,i[1]*50),(road[id+1][0]*50,road[id+1][1]*50))
 				#开枪
 			if self.action=='shoot':fire=NPC_act.shoot(self)
 			if fire:
-				map.sound_list.append('步枪开火.wav')
-				map.o_sprite.add(shell(self.x+18,self.y+15,self.angle))
+				xz=0#修正
+				if self.gun['type']==0:map.sound_list.append('步枪开火'+str(random.randint(1,4))+'.mp3')
+				if self.gun['type']==1:
+					xz=12
+					map.sound_list.append('手枪开火'+str(random.randint(1,4))+'.mp3')
+				map.o_sprite.add(shell(self.x+18,self.y+15+xz,self.angle))
 				#装弹
 			if self.state=='reload':
 				if NPC_act.reload(self,map):
@@ -140,6 +165,20 @@ class NPC(pygame.sprite.Sprite):
 		
 def create_npc(map):#开局NPC生成
 	red,blue=0,0#红蓝数量
+	#生成编队
+	map.team_list['b1']=setting.blue_K
+	for id in range(setting.blue_team):#蓝队
+		#生成一个编队
+		id+=1
+		s0=random.randint(setting.blue_team_s0[0],setting.blue_team_s0[1])#步枪手
+		s1=random.randint(setting.blue_team_s1[0],setting.blue_team_s1[1])#军官
+		while s0+s1>setting.blue_team_num:#人太多
+			if s0+s1>setting.blue_team_num:
+				if random.choice(['s0'])=='s0':s0-=1
+		while s0+s1<setting.blue_team_num:#人太少
+			if random.choice(['s0'])=='s0':s0+=1
+		map.team_list['b'+str(id+1)]=s0*['0']+s1*['1']
+	print(map.team_list)
 	while red<setting.npc_red_num or blue<setting.npc_blue_num:
 		x,y=random.randint(35,map.width*0.95),random.randint(45,map.height*0.95)
 		if red==0:#红 空的
@@ -149,7 +188,8 @@ def create_npc(map):#开局NPC生成
 					place=False #和树干重合
 			if place:
 				red+=1#放置第一个红队NPC
-				map.npc_group.add(NPC(x,y,'red'))
+				N=NPC(x,y,'red')
+				map.npc_group.add(N)
 		elif red<setting.npc_red_num:#红队人不齐
 			for obj in map.npc_group:
 				if obj.side=='red':
@@ -181,7 +221,17 @@ def create_npc(map):#开局NPC生成
 					place=False#npc重合
 			if place:
 				blue+=1#放置第一个蓝队NPC
-				map.npc_group.add(NPC(x,y,'blue'))
+				b=NPC(x,y,'blue')
+				for id,i in enumerate(map.team_list.values()):
+					if '1'in i:#默认军官
+						b.level=1.5+random.uniform(0.05,setting.blue_team_lv)
+						b.job=1
+						b.gun=setting.blue_team_pistol
+						b.team=id+1
+						map.team_list['b'+str(id+1)].append(b)
+						map.team_list['b'+str(id+1)].remove('1')
+						map.npc_group.add(b)
+						break
 		elif blue<setting.npc_blue_num:#红队人不齐
 			for obj in map.npc_group:
 				if obj.side=='blue':
@@ -201,4 +251,35 @@ def create_npc(map):#开局NPC生成
 					place=False #和npc重合
 			if place:
 				blue+=1
-				map.npc_group.add(NPC(x,y,'blue'))
+				b=NPC(x,y,'blue')
+				for id,i in enumerate(map.team_list.values()):
+					if '1'in i:#当军官
+						b.level=1.5+random.uniform(0.05,setting.blue_team_lv)
+						b.job=1
+						b.gun=setting.blue_team_pistol
+						b.team=id+1
+						map.team_list['b'+str(id+1)].append(b)
+						map.team_list['b'+str(id+1)].remove('1')
+						map.npc_group.add(b)
+						break
+					elif '0'in i:#当步枪手
+						b.level=1+random.uniform(0.01,setting.blue_team_lv)
+						b.job=0
+						b.gun=setting.blue_team_rifle
+						b.team=id+1
+						map.team_list['b'+str(id+1)].append(b)
+						map.team_list['b'+str(id+1)].remove('0')
+						map.npc_group.add(b)
+						break
+					elif '2' in i:#当总指挥
+						b.level=1+random.uniform(0.1,setting.blue_team_lv)
+						b.job=2
+						b.gun=setting.blue_team_pistol
+						b.team=id+1
+						map.team_list['b'+str(id+1)].append(b)
+						map.team_list['b'+str(id+1)].remove('2')
+						map.npc_group.add(b)
+						break
+					else:
+						continue
+	print('\n1',map.team_list)

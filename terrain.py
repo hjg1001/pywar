@@ -22,6 +22,10 @@ class trunk_class(pygame.sprite.Sprite):
 		terrain_back.blit(self.leaf.img,(self.leaf.rect.x,self.leaf.rect.y))
 	def update(self,screen,map,terrain_back,state):
 		if state=='init':self.draw_init(screen,terrain_back)
+		y=self.y//50#纵行
+		x=self.x//50#横行
+		map.A_map[y][x]=None
+		self.image.fill((250,20,255))
 def place_tree(map,sprite):#放树
 	first=True
 	for u in range(1,random.randint(setting.tree_num[0],setting.tree_num[1])):
