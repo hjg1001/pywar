@@ -1,4 +1,4 @@
-import pygame,control,random,terrain,setting,NPC,astar
+import pygame,control,random,terrain,setting,NPC,astar,tile
 pygame.init()
 screen=pygame.display.set_mode((720,1600))
 font=pygame.font.Font('NotoSerifCJK-Regular.ttc',15)
@@ -15,10 +15,11 @@ class map_class:
 		self.m_l,self.m_r,self.m_d,self.m_u=False,False,False,False#移动视角
 		self.a_s,self.z_s=False,False#缩放地图
 		self.grass1=pygame.image.load('grass.png').convert()
-		self.map=pygame.Surface((setting.map_w,setting.map_h),pygame.SRCALPHA).convert()#小地图图层
-		self.grass_back=pygame.Surface((width,height)).convert()#非精灵图层
-		self.display_surface=pygame.Surface((width,height))#完整的地图图层
+		self.map=pygame.Surface((setting.map_w,setting.map_h),pygame.SRCALPHA,32).convert()#小地图图层
+		self.grass_back=pygame.Surface((width,height),32).convert()#草地图层
+		self.display_surface=pygame.Surface((setting.width,setting.height),32)#显示图层
 		self.sprite_group=pygame.sprite.Group()#地图精灵组
+		self.block_group=pygame.sprite.Group()#区块精灵组
 		self.o_sprite=pygame.sprite.Group()#其他精灵组
 		self.npc_group=pygame.sprite.Group()#NPC精灵组
 		self.s_npc=False#选中模式
@@ -33,11 +34,14 @@ class map_class:
 		self.team_list={}
 		self.pause=False#暂停
 		self.A_map=[]#二维简化地图
+		self.m_surface=[]#切分区块列表
 		self.astar_search=0
+		self.flag_list=[]
+		self.su_num=0
 	def init(self):
-		for i in range(int(self.height/50)):
+		for i in range(int(self.height//60)):
 			self.A_map.append([])
-			for o in range(int(self.width/50)):
+			for o in range(int(self.width//60)):
 				self.A_map[i].append(0)
 		self.astar_search=astar.Astar(self.A_map)
 		for x in range(0,self.width,50):
@@ -45,11 +49,26 @@ class map_class:
 				self.grass_back.blit(self.grass1,(x,y),(random.randint(50,255-50),0,50,50))
 		#初始化地形(草地除外)
 		terrain.place_tree(map,map.sprite_group)#树
+		#旗帜
+		flag_num=0
+		while flag_num<setting.flag_num:
+			for y,Y in enumerate(self.A_map):
+				if random.randint(0,1200)>1190:
+					for x,X in enumerate(Y):
+						if flag_num==setting.flag_num:break
+						if X==0 and random.randint(0,300)>299:
+							self.flag_list.append(terrain.flag(x*60,y*60))
+							flag_num+=1
 	def render(self,screen):
-		#渲染图层
-		new_back=self.display_surface.subsurface(pygame.Rect(0-self.vx,0-self.vy,setting.width,setting.height))
-		screen.blit(new_back,(0,0))
-		new_back.fill((0,0,0))
+		#渲染旗帜
+		for i in self.flag_list:
+			if not i.oc:self.display_surface.blit(tile.flag,(i.x+map.vx,i.y+map.vy))
+			if i.oc=='blue':self.display_surface.blit(tile.flag_blue,(i.x+map.vx,i.y+map.vy))
+			if i.oc=='red':self.display_surface.blit(tile.flag_red,(i.x+map.vx,i.y+map.vy))
+			point=font.render(str(i.point),True,(255,225,0))
+			self.display_surface.blit(point,(i.x+9+map.vx,i.y-3+map.vy))
+		#渲染显示图层
+		screen.blit(self.display_surface,(0,0))
 		#渲染小地图
 		self.map.fill((255,255,255))
 		for i in self.npc_group:
@@ -57,9 +76,13 @@ class map_class:
 			else:color=(7,96,177)
 			pygame.draw.circle(self.map,color,((setting.map_w/self.width)*i.x,(setting.map_h/self.height)*i.y),2)
 			pygame.draw.rect(self.map,(0,0,0),((setting.map_w/self.width)*(-self.vx),(setting.map_h/self.height)*(-self.vy),(setting.map_w/self.width)*setting.width,(setting.map_h/self.height)*setting.height),2)
-map=map_class(3000,3000)
+		for i in self.flag_list:
+			if not i.oc:color=(79,79,79)
+			elif i.oc=='blue':color=(26,68,141)
+			else:color=(102,15,15)
+			pygame.draw.circle(self.map,color,((setting.map_w/self.width)*i.x,(setting.map_h/self.height)*i.y),5)
+map=map_class(setting.mapw,setting.maph)
 map.init()
-map.sprite_group.update(screen,map,map.grass_back,'init')
 NPC.create_npc(map)
 zx=control.Zx(setting.width//2,setting.height//2)
 while True:
@@ -68,13 +91,14 @@ while True:
 		control.control(event,map)
 	screen.fill((0,0,0,0))
 	control.act(map,screen,zx)
-	#渲染非精灵
-	map.display_surface.blit(map.grass_back,(0,0))
+	#渲染草地
+	map.display_surface.fill((0,0,0))
+	map.display_surface.blit(map.grass_back,(map.vx,map.vy))
 	#渲染精灵 图层顺序低-高
-	map.o_sprite.update(map.display_surface,map)
-	map.sprite_group.update(screen,map,map.display_surface,'else')
-	map.npc_group.update(map.display_surface,map)
-	#渲染图层
+	map.o_sprite.update(map)
+	map.sprite_group.update(map)
+	map.npc_group.update(map)
+	#总渲染
 	map.render(screen)
 	#渲染左上角信息
 	ck.tick(setting.fps)

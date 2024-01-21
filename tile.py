@@ -1,4 +1,8 @@
 import pygame,random,setting
+#旗帜
+flag=pygame.image.load('flag.png')
+flag_blue=pygame.image.load('flag_blue.png')
+flag_red=pygame.image.load('flag_red.png')
 #NPC贴图
 #步枪
 	#闲置
@@ -77,8 +81,8 @@ for x in range(red.get_width()):
 			blue.set_at((x,y),(97,96,177))
 red_walk1,blue_walk1=[],[]
 for tile in range(4):
-	red_walk.append(red.subsurface(pygame.Rect(0+tile*30,0,30,39)))
-	blue_walk.append(blue.subsurface(pygame.Rect(0+tile*30,0,30,39)))
+	red_walk1.append(red.subsurface(pygame.Rect(0+tile*30,0,30,39)))
+	blue_walk1.append(blue.subsurface(pygame.Rect(0+tile*30,0,30,39)))
 	#瞄准
 red=pygame.image.load('aim1.png')
 blue=red.copy()

@@ -29,23 +29,14 @@ def angle(x,y,target_x,target_y,angle):
 def move(npc,map):#移动
 	road_list=0
 	if npc.target_x!=0 and npc.target_y!=0 and npc.angle==npc.target_angle:
-		road_list=map.astar_search.run([int(npc.x//50),int(npc.y//50)],[int(npc.target_x//50),int(npc.target_y//50)])
-		if len(road_list)<=1:npc.move_q=[npc.target_x,npc.target_y]
-		elif [npc.x,npc.y]==[road_list[0][0]*50,road_list[0][1]*50]:
-			npc.move_q=[road_list[1][0]*50,road_list[1][1]*50]
-		elif npc.move_q==0 or (npc.move_q[0]!=road_list[1][0]*50 and npc.move_q[1]!=road_list[1][1]*50):
-			npc.move_q=[road_list[0][0]*50,road_list[0][1]*50]
-		new_xy=move_q(npc.x,npc.y,npc.move_q[0],npc.move_q[1],npc.speed)
+		new_xy=move_q(npc.x,npc.y,npc.target_x,npc.target_y,npc.speed)
 		npc.state='move'
 		npc.x,npc.y=new_xy
-		angle_num=angle(npc.x,npc.y,npc.move_q[0],npc.move_q[1],npc.angle)
+		angle_num=angle(npc.x,npc.y,npc.target_x,npc.target_y,npc.angle)
 		npc.target_angle=int(angle_num)
 		if abs(npc.x-npc.target_x )<2 and abs(npc.y-npc.target_y)<2:
-			npc.move_q=0
 			npc.target_x,npc.target_y=0,0
 			npc.state=None
-		npc.road=road_list
-	return road_list
 def shoot(npc):#开火
 	fire=False
 	if npc.gun['ammo']==0 and npc.rifle_ammo==0:
